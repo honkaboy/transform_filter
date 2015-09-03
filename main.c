@@ -167,7 +167,7 @@ static void transformNVector( const double vector[DIMENSIONS],
                               const double T[DIMENSIONS][DIMENSIONS],
                               double retVector[DIMENSIONS] )
 {
-    int i,j;
+    unsigned int i,j;
     
     for( i=0; i<DIMENSIONS; i++ )
     {
