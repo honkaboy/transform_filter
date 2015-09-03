@@ -6,9 +6,9 @@
  * The following code:
  *   - Creates a sine wave input signal.
  *   - Digitally filters the input signal.
- *   - Assigns the input signal to be a single element of a 3-vector
- *   - Rotates the given vector in 3-space according to given Euler rotations
- *   - Writes the resultant vector signal to a human-readable file
+ *   - Assigns the input signal to be a single element of a 3-vector signal.
+ *   - Rotates the vector signal in 3-space according to some given Euler angles.
+ *   - Writes the resultant vector signal to a human-readable file.
  */
 
  
@@ -72,9 +72,9 @@ static inline double zTransformG( double u[], double y[], int arrayLength );
  * T           NxN transformation matrix.  Cannot be modified.
  * retVector   N-element array to store transformed vector.
  */
-static void transformNVector( const double vector[DIMENSIONS],
-                              double T[DIMENSIONS][DIMENSIONS],
-                              double retVector[DIMENSIONS] );
+static inline void transformNVector( const double vector[DIMENSIONS],
+                                     double T[DIMENSIONS][DIMENSIONS],
+                                     double retVector[DIMENSIONS] );
 
 /*
  * Calculate DCM (rotation matrix) for 1-2-3 Euler angle transformation.
@@ -116,7 +116,7 @@ int main( void )
 
     // Open write file stream & write file header
     pWriteFile = fopen (WRITE_FILENAME,WRITE_FILE_TYPE);
-    fprintf( pWriteFile, "time\t\taccBodyX\t\t\taccBodyY\t\t\taccBodyZ\r\n" );
+    fprintf( pWriteFile, "time\t\taccBodyX\t\taccBodyY\t\taccBodyZ\r\n" );
     
     
     /* Create input signal, filtered output, and transform to body coordinates.
@@ -174,7 +174,7 @@ static inline double zTransformG( double u[], double y[], int arrayLength)
 }
 
 
-static void transformNVector( const double vector[DIMENSIONS],
+static inline void transformNVector( const double vector[DIMENSIONS],
                               double T[DIMENSIONS][DIMENSIONS],
                               double retVector[DIMENSIONS] )
 {
