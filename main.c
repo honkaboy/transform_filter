@@ -1,10 +1,14 @@
 /*
- * Interview test for General Atomics-ASI
  * Nathan Honka
- * 6/8/2012
+ * 6/8/2012 - Originally written for General Atomics interview
+ * 9/2/2015 - Rewritten as a general code sample
  *
  * The following code:
- *   - 
+ *   - Creates a sine wave input signal.
+ *   - Digitally filters the input signal.
+ *   - Assigns the input signal to be a single element of a 3-vector
+ *   - Rotates the given vector in 3-space according to given Euler rotations
+ *   - Writes the resultant vector signal to a human-readable file
  */
 
  
@@ -35,31 +39,31 @@
 #define G_COEFF_D      (-1.2382)
 #define G_COEFF_E      0.4531
 
+// Euler angles
+#define DEG_TO_RAD(X) (X * M_PI/180)
+#define PSI           DEG_TO_RAD(15.0)
+#define THETA         DEG_TO_RAD(20.0)
+#define PHI           DEG_TO_RAD(25.0)
+
 
 /**** Pre-allocated constants ****/
 // Sine argument modifier equal to 2*pi/period
 const double argMod = 2*M_PI/PERIOD;
 
-// Navigation frame to body frame DCM
-const double nav2body[DIMENSIONS][DIMENSIONS] =            
-    {{0.866, 0.25,  0.433  },
-     {-0.5,  0.433, 0.75   },
-     {0,    -0.866, 0.5    }};
-
 
 /**** Private function prototypes ****/
 
 /*
- * Summary:     Run the z-transform of G(z) = (a*z^2 + b*z + c) / (z^2 + d*z + e)
+ * Summary:     Run filter G(z) = (a*z^2 + b*z + c) / (z^2 + d*z + e)
  *              on the input function u(t).
  * u            Pointer to array of length <arrayLength> containing input vector
  *              u(t).
  * y            Pointer to the array of length <arrayLength> containing the
  *              output vector y(t).
  * arrayLength  Integer equal to the length of the input vector u(t)
- * idx          Integer specifying the index of y to calculate via z-transform.
+ * idx          Integer specifying the index of y to calculate with filter.
  */
-static double zTransformG( double u[], double y[], int arrayLength );
+static inline double zTransformG( double u[], double y[], int arrayLength );
 
 /*
  * Summary     Transform a N-vector, multiplying by an NxN transformation matrix
@@ -69,10 +73,16 @@ static double zTransformG( double u[], double y[], int arrayLength );
  * retVector   N-element array to store transformed vector.
  */
 static void transformNVector( const double vector[DIMENSIONS],
-                              const double T[DIMENSIONS][DIMENSIONS],
+                              double T[DIMENSIONS][DIMENSIONS],
                               double retVector[DIMENSIONS] );
 
-
+/*
+ * Calculate DCM (rotation matrix) for 1-2-3 Euler angle transformation.
+ */
+static void euler312DCM( double dcm[3][3],
+                         double psi, 
+                         double theta,
+                         double phi );
 
 /****  Entry point  ****/
 
@@ -82,13 +92,13 @@ int main( void )
     double y[FILTER_STORAGE_LENGTH];    // filtered signal
     double accNavVector[DIMENSIONS];    // acc vector, nav frame
     double accBodyVector[DIMENSIONS];   // acc vector, body frame
+    double nav2body[3][3];              // Nav to body DCM
     double t;                           // Current time (s)
     int i;                              // Iterators
     FILE *pWriteFile;                   // Text file write stream;
 
     
     /******* Initialization ********/
-    // Initialize variables
     for( i=0; i<DIMENSIONS; i++ )
     {
         accNavVector[i] = 0;
@@ -102,6 +112,7 @@ int main( void )
         y[i] = 0;
     }
     t = 0;
+    euler312DCM(nav2body, PSI, THETA, PHI);
 
     // Open write file stream & write file header
     pWriteFile = fopen (WRITE_FILENAME,WRITE_FILE_TYPE);
@@ -114,7 +125,7 @@ int main( void )
     for( t=T0; t<=TIME_LENGTH; t+=DELTA_T )
     {    
         /* Calculate input sine wave & filtered output */
-        // Shift past storage arrays for z-transform
+        // Shift past storage arrays for filter
         for( i=FILTER_STORAGE_LENGTH-1; i>0; i-- )
         {
             u[i] = u[i-1];
@@ -164,7 +175,7 @@ static inline double zTransformG( double u[], double y[], int arrayLength)
 
 
 static void transformNVector( const double vector[DIMENSIONS],
-                              const double T[DIMENSIONS][DIMENSIONS],
+                              double T[DIMENSIONS][DIMENSIONS],
                               double retVector[DIMENSIONS] )
 {
     unsigned int i,j;
@@ -177,4 +188,30 @@ static void transformNVector( const double vector[DIMENSIONS],
             retVector[i] += vector[j]*T[i][j];
         }
     }
+}
+
+
+static void euler312DCM( double dcm[3][3],
+                         double psi, 
+                         double theta,
+                         double phi )
+{
+  // Preliminary calcs
+  double c_phi, s_phi, c_the, s_the, c_psi, s_psi;
+  c_phi = cos(phi);     s_phi = sin(phi);
+  c_the = cos(theta);   s_the = sin(theta);
+  c_psi = cos(psi);     s_psi = sin(psi);
+
+  // Populate DCM
+  dcm[0][0] = c_psi*c_phi - s_psi*s_the*s_phi;
+  dcm[0][1] = c_psi*s_phi + s_psi*s_the*c_phi;
+  dcm[0][2] = -s_psi*c_the;
+
+  dcm[1][0] = -s_phi*c_the;
+  dcm[1][1] = c_the*c_phi;
+  dcm[1][2] = s_the;
+
+  dcm[2][0] = s_psi*c_phi + c_psi*s_the*s_phi;
+  dcm[2][1] = s_psi*s_phi - c_psi*s_the*c_phi;
+  dcm[2][2] = c_psi*c_the;
 }
